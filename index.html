@@ -4,91 +4,64 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Visor Topográfico 3D</title>
+  
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Cesium.js"></script>
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body, #cesiumContainer {
-      width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #121519; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    .top-bar {
-      position: absolute; top: 16px; left: 16px; z-index: 10;
-      background: rgba(18, 21, 25, 0.90); backdrop-filter: blur(8px);
-      padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12);
-      color: #f0f3f6; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-    }
-    .top-bar h1 {
-      margin: 0 6px 0 0; font-size: 14px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #58a6ff; white-space: nowrap;
-    }
-    .nav-btn {
-      background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15);
-      color: #e6edf3; padding: 7px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;
-      white-space: nowrap; display: inline-flex; align-items: center; justify-content: center;
-    }
+    html, body, #cesiumContainer { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #121519; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    
+    .top-bar { position: absolute; top: 16px; left: 16px; z-index: 10; background: rgba(18, 21, 25, 0.90); backdrop-filter: blur(8px); padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12); color: #f0f3f6; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+    .top-bar h1 { margin: 0 6px 0 0; font-size: 14px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #58a6ff; white-space: nowrap; }
+    .nav-btn { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #e6edf3; padding: 7px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; }
     .nav-btn:hover { background: #1f6feb; border-color: #58a6ff; }
     .nav-btn.active-measure { background: #238636; border-color: #2ea043; color: #fff; }
     .nav-btn.active-slope { background: #d29922; border-color: #e3b341; color: #000; font-weight: 700; }
+    .nav-btn.active-plane { background: #8957e5; border-color: #a371f7; color: #fff; font-weight: 700; }
     .nav-btn-export { background: rgba(35, 134, 54, 0.25); border-color: #2ea043; color: #7ee787; }
     .nav-btn-export:hover { background: #238636; color: #fff; }
     .nav-btn-camera { background: rgba(88, 166, 255, 0.18); border-color: #58a6ff; color: #58a6ff; }
     .nav-btn-camera:hover { background: #1f6feb; color: #fff; }
 
-    .compass-card {
-      position: absolute; top: 16px; right: 16px; z-index: 10;
-      width: 110px; height: 110px;
-      background: rgba(18, 21, 25, 0.90); backdrop-filter: blur(8px);
-      border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.18);
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
-      transition: border-color 0.2s, transform 0.15s;
-    }
+    .compass-card { position: absolute; top: 16px; right: 16px; z-index: 10; width: 110px; height: 110px; background: rgba(18, 21, 25, 0.90); backdrop-filter: blur(8px); border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.18); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.5); transition: border-color 0.2s, transform 0.15s; }
     .compass-card:hover { border-color: #58a6ff; transform: scale(1.04); }
     .compass-svg { width: 75px; height: 75px; transform-origin: 50% 50%; will-change: transform; }
 
-    .info-panel {
-      position: absolute; top: 72px; left: 16px; z-index: 10;
-      background: rgba(18, 21, 25, 0.95); backdrop-filter: blur(8px);
-      padding: 14px 18px; border-radius: 8px; font-size: 12px; display: none; min-width: 240px; box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-    }
+    .info-panel { position: absolute; top: 72px; left: 16px; z-index: 10; background: rgba(18, 21, 25, 0.95); backdrop-filter: blur(8px); padding: 14px 18px; border-radius: 8px; font-size: 12px; display: none; min-width: 240px; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
     .panel-measure { border: 1px solid #58a6ff; }
     .panel-slope { border: 1px solid #d29922; }
+    .panel-plane { border: 1px solid #a371f7; }
     .info-panel h2 { margin: 0 0 10px 0; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 5px; }
     .panel-measure h2 { color: #58a6ff; }
     .panel-slope h2 { color: #e3b341; }
+    .panel-plane h2 { color: #c084fc; }
     .metric-row { display: flex; justify-content: space-between; margin-bottom: 5px; color: #e6edf3; }
     .metric-val { font-weight: bold; font-family: monospace; }
     .val-measure { color: #7ee787; }
     .val-slope { color: #f0883e; }
+    .val-plane { color: #d8b4fe; }
 
-    .coords-card {
-      position: absolute; bottom: 20px; left: 16px; z-index: 10;
-      background: rgba(18, 21, 25, 0.90); backdrop-filter: blur(8px);
-      padding: 10px 16px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.12);
-      color: #c9d1d9; font-size: 12px; font-family: "SFMono-Regular", Consolas, monospace;
-      display: flex; flex-direction: column; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-    .system-tag {
-      font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase;
-      color: #58a6ff; background: rgba(88, 166, 255, 0.12); border: 1px solid rgba(88, 166, 255, 0.25);
-      padding: 2px 6px; border-radius: 3px; align-self: flex-start;
-    }
+    .coords-card { position: absolute; bottom: 20px; left: 16px; z-index: 10; background: rgba(18, 21, 25, 0.90); backdrop-filter: blur(8px); padding: 10px 16px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.12); color: #c9d1d9; font-size: 12px; font-family: "SFMono-Regular", Consolas, monospace; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .tags-container { display: flex; gap: 8px; align-items: center; }
+    .system-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #58a6ff; background: rgba(88, 166, 255, 0.12); border: 1px solid rgba(88, 166, 255, 0.25); padding: 2px 6px; border-radius: 3px; }
+    .source-tag { font-size: 9px; font-weight: 600; letter-spacing: 0.5px; color: #8b949e; text-transform: uppercase; }
     .coords-row { display: flex; gap: 18px; }
     .coord-item span { color: #7ee787; font-weight: bold; }
 
+    #loadingBar { position: absolute; bottom: 30px; right: 20px; z-index: 100; background: rgba(31, 111, 235, 0.85); border: 1px solid #58a6ff; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; display: none; backdrop-filter: blur(4px); box-shadow: 0 4px 15px rgba(0,0,0,0.5); pointer-events: none; transition: opacity 0.3s; }
+
     @media (max-width: 768px) {
-      .top-bar {
-        top: 10px; left: 10px; right: 10px;
-        padding: 8px 10px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch;
-      }
+      .top-bar { top: 10px; left: 10px; right: 10px; padding: 8px 10px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
       .top-bar h1 { font-size: 13px; padding-right: 4px; }
       .nav-btn { padding: 9px 13px; font-size: 13px; min-height: 42px; }
-      .compass-card {
-        width: 75px; height: 75px; top: auto; bottom: 85px; right: 12px;
-      }
+      .compass-card { width: 75px; height: 75px; top: auto; bottom: 85px; right: 12px; }
       .compass-svg { width: 50px; height: 50px; }
       .coords-card { bottom: 10px; left: 10px; right: 10px; padding: 8px 12px; font-size: 11px; }
       .coords-row { gap: 8px; justify-content: space-between; }
+      .tags-container { flex-direction: column; align-items: flex-start; gap: 3px; }
       .info-panel { top: 68px; left: 10px; right: 10px; min-width: unset; font-size: 13px; }
+      #loadingBar { bottom: 100px; right: 50%; transform: translateX(50%); white-space: nowrap; }
     }
   </style>
 </head>
@@ -99,11 +72,12 @@
     <button class="nav-btn" onclick="topView()">Planta (2D)</button>
     <button class="nav-btn" onclick="perspectiveView()">Perspectiva 3D</button>
     <button class="nav-btn" id="measureBtn" onclick="toggleMode('measure')">📏 Medir</button>
-    <button class="nav-btn" id="slopeBtn" onclick="toggleMode('slope')">📐 Talud</button>
+    <button class="nav-btn" id="slopeBtn" onclick="toggleMode('slope')">📐 Cresta-Pie</button>
+    <button class="nav-btn" id="planeBtn" onclick="toggleMode('plane')">▰ Plano Estructural</button>
     <button class="nav-btn nav-btn-camera" onclick="takeExecutiveScreenshot()">📸 Captura</button>
     <button class="nav-btn nav-btn-export" id="exportBtn" onclick="exportToCSV()">📥 CSV (<span id="recCount">0</span>)</button>
-    <button class="nav-btn" id="clearBtn" style="display: none;" onclick="clearActiveMeasurement()">Borrar Línea</button>
-    <button class="nav-btn" id="resetStorageBtn" onclick="clearAllHistory()" title="Borra el registro acumulado">Limpiar Historial</button>
+    <button class="nav-btn" id="clearBtn" style="display: none;" onclick="clearActiveMeasurement()">Borrar</button>
+    <button class="nav-btn" id="resetStorageBtn" onclick="clearAllHistory()" title="Borra el registro acumulado">Limpiar</button>
   </div>
 
   <div class="compass-card" id="compassBtn" title="Clic para orientar al Norte" onclick="orientToNorth()">
@@ -117,23 +91,34 @@
 
   <div class="info-panel panel-measure" id="panelMeasure">
     <h2>Medición 3D</h2>
-    <div class="metric-row"><span>Distancia 3D:</span><span class="metric-val val-measure" id="mDist3D">-- m</span></div>
-    <div class="metric-row"><span>Dist. Horizontal:</span><span class="metric-val val-measure" id="mDistH">-- m</span></div>
+    <div class="metric-row"><span>Distancia Real (3D):</span><span class="metric-val val-measure" id="mDist3D">-- m</span></div>
+    <div class="metric-row"><span>Distancia Horizontal:</span><span class="metric-val val-measure" id="mDistH">-- m</span></div>
     <div class="metric-row"><span>Desnivel (ΔZ):</span><span class="metric-val val-measure" id="mDeltaZ">-- m</span></div>
     <div class="metric-row"><span>Pendiente:</span><span class="metric-val val-measure" id="mSlope">-- %</span></div>
   </div>
 
   <div class="info-panel panel-slope" id="panelSlope">
-    <h2>Análisis de Talud</h2>
-    <div class="metric-row"><span>Inclinación (Dip):</span><span class="metric-val val-slope" id="tDip">-- °</span></div>
-    <div class="metric-row"><span>Dirección (Azimut):</span><span class="metric-val val-slope" id="tAzimuth">-- °</span></div>
-    <div class="metric-row"><span>Altura Banco (ΔZ):</span><span class="metric-val val-slope" id="tDeltaZ">-- m</span></div>
-    <div class="metric-row"><span>Ancho Horizontal:</span><span class="metric-val val-slope" id="tDistH">-- m</span></div>
-    <div class="metric-row"><span>Distancia Real:</span><span class="metric-val val-slope" id="tDist3D">-- m</span></div>
+    <h2>Análisis Cresta - Pie</h2>
+    <div class="metric-row"><span>Ángulo de Caída:</span><span class="metric-val val-slope" id="tDip">-- °</span></div>
+    <div class="metric-row"><span>Dir. de Descenso:</span><span class="metric-val val-slope" id="tAzimuth">-- °</span></div>
+    <div class="metric-row"><span>Altura (ΔZ):</span><span class="metric-val val-slope" id="tDeltaZ">-- m</span></div>
+    <div class="metric-row"><span>Dist. Horizontal:</span><span class="metric-val val-slope" id="tDistH">-- m</span></div>
+    <div class="metric-row"><span>Dist. Real:</span><span class="metric-val val-slope" id="tDist3D">-- m</span></div>
   </div>
 
-  <div class="coords-card">
-    <div class="system-tag" id="zoneTag">SISTEMA LOCAL DE MINA</div>
+  <div class="info-panel panel-plane" id="panelPlane">
+    <h2>Plano Estructural (3 Puntos)</h2>
+    <div class="metric-row"><span>Rumbo (Strike):</span><span class="metric-val val-plane" id="pStrike">-- °</span></div>
+    <div class="metric-row"><span>Buzamiento (Dip):</span><span class="metric-val val-plane" id="pDip">-- °</span></div>
+    <div class="metric-row"><span>Dir. de Buzamiento:</span><span class="metric-val val-plane" id="pDipDir">-- °</span></div>
+    <div class="metric-row"><span>Área Analizada:</span><span class="metric-val val-plane" id="pArea">-- m²</span></div>
+  </div>
+
+  <div class="coords-card" id="coordsCard">
+    <div class="tags-container">
+      <div class="system-tag" id="zoneTag">SISTEMA LOCAL DE MINA</div>
+      <div class="source-tag">FUENTE COTA: SUPERFICIE 3D VISIBLE (DSM)</div>
+    </div>
     <div class="coords-row">
       <div class="coord-item">Este (X): <span id="localX">--</span> m</div>
       <div class="coord-item">Norte (Y): <span id="localY">--</span> m</div>
@@ -141,39 +126,39 @@
     </div>
   </div>
 
+  <div id="loadingBar">⏳ Cargando nivel de detalle...</div>
   <div id="cesiumContainer"></div>
 
   <script>
     // =========================================================================
-    // 1. CONFIGURACIÓN DEL REPOSITORIO (AJUSTA AQUÍ TU ZONA Y TU TOKEN)
+    // 1. CONFIGURACIÓN DEL DICCIONARIO DE ZONAS
     // =========================================================================
-    const CESIUM_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjlnWjh5WnZVbTRSZ2s5eGUiLCJqdGkiOiI0NzQyZDU1ZS1lNzcwLTQ1OTEtYmVkMS1hYWFkYzJjNTRjYzYiLCJpZCI6NDc3MzE0LCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3ODgxOTYzMzR9.d7HeXTwGpKuVONPPBcghXZlISjckj1wtQnxBnAMTi9M";
-    const ZONA_ACTIVA = "FILOS"; // Alterna entre: "FILOS" | "BERMEJAL_GUADALUPE" | "PADS"
+    const CESIUM_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6Im45NTNpVjFfRHVjYmt5ZlYiLCJqdGkiOiJiNGMyMWUxYy1kZTE2LTQ5YTEtYWJkNi0wY2NjNzkzMjQxZTgiLCJpZCI6NDc3MzE0LCJzdWIiOiJqY2FzdHJvaiIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJUb2tlbiBGaWxvcyIsImlhdCI6MTc5MDAxNzc0MX0.iEW8XqGhQngkPeEpgPVsHucynhJuGc95ktO7KxW1AI4";
+    
+    // Cambia este nombre para cargar el modelo de otra zona de la mina
+    const ZONA_ACTIVA = "FILOS"; 
 
     const CONFIG_ZONAS = {
       "BERMEJAL_GUADALUPE": {
         nombre: "TAJO BERMEJAL - GUADALUPE",
-        assetId: 0000000,
-        lat0: 17.8579401103632,
-        lon0: -99.6739536626923,
+        assetId: 0000000, // <--- PONER TU ASSET ID
+        lat0: 17.8579401103632, lon0: -99.6739536626923,
         offset: [428637.51373973046, 1974398.0838580697, 3.8437755266563727],
         rvec: [0.00011132995333956913, -0.00003292231694213758, -0.00043669032632740194],
         scale: 1.0002526469530397
       },
       "FILOS": {
         nombre: "TAJO LOS FILOS",
-        assetId: 5890482,
-        lat0: 17.8579401103632,
-        lon0: -99.6739536626923,
+        assetId: 5890482, // <--- PONER TU ASSET ID
+        lat0: 17.8579401103632, lon0: -99.6739536626923,
         offset: [428637.51373973046, 1974398.0838580697, 3.8437755266563727],
         rvec: [0.00011132995333956913, -0.00003292231694213758, -0.00043669032632740194],
         scale: 1.0002526469530397
       },
       "PADS": {
         nombre: "PADS DE LIXIVIACIÓN",
-        assetId: 0000000,
-        lat0: 17.8641030711538,
-        lon0: -99.6942028892308,
+        assetId: 0000000, // <--- PONER TU ASSET ID
+        lat0: 17.8641030711538, lon0: -99.6942028892308,
         offset: [426491.06053362874, 1975081.382389519, 3.8771747150963165],
         rvec: [0.00009673884755205756, 0.0000010868499923518604, -0.0005409057326296537],
         scale: 1.000261022361419
@@ -188,96 +173,60 @@
     Cesium.Ion.defaultAccessToken = CESIUM_TOKEN;
 
     const viewer = new Cesium.Viewer('cesiumContainer', {
-      contextOptions: { webgl: { preserveDrawingBuffer: true } },
-      timeline: false, animation: false, baseLayerPicker: false,
-      geocoder: false, homeButton: false, sceneModePicker: false,
-      navigationHelpButton: false, infoBox: false, selectionIndicator: false
+      baseLayer: false, imageryProvider: false, contextOptions: { webgl: { preserveDrawingBuffer: true } },
+      timeline: false, animation: false, baseLayerPicker: false, geocoder: false, homeButton: false, sceneModePicker: false, navigationHelpButton: false, infoBox: false, selectionIndicator: false
     });
-
     viewer.scene.globe.show = false;
-    if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = false;
-    if (viewer.scene.skyBox) viewer.scene.skyBox.show = false;
-    if (viewer.scene.sun) viewer.scene.sun.show = false;
-    if (viewer.scene.moon) viewer.scene.moon.show = false;
     viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#121519');
 
     let currentTileset = null;
-    Cesium.Cesium3DTileset.fromIonAssetId(activeZone.assetId, {
-      maximumScreenSpaceError: 2
-    }).then(function(tileset) {
-      currentTileset = tileset;
-      viewer.scene.primitives.add(tileset);
-      perspectiveView();
-    });
+    Cesium.Cesium3DTileset.fromIonAssetId(activeZone.assetId, { maximumScreenSpaceError: 2 })
+    .then(function(tileset) {
+      currentTileset = tileset; viewer.scene.primitives.add(tileset); perspectiveView();
 
-    function topView() {
-      if (!currentTileset) return;
-      viewer.zoomTo(currentTileset, new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-89.9), 0));
-    }
-
-    function perspectiveView() {
-      if (!currentTileset) return;
-      viewer.zoomTo(currentTileset, new Cesium.HeadingPitchRange(Cesium.Math.toRadians(45), Cesium.Math.toRadians(-35), 0));
-    }
-
-    const needle = document.getElementById('compassNeedle');
-    viewer.scene.postRender.addEventListener(function() {
-      const headingDeg = Cesium.Math.toDegrees(viewer.camera.heading);
-      needle.style.transform = `rotate(${-headingDeg}deg)`;
-    });
-
-    function orientToNorth() {
-      const camera = viewer.camera;
-      viewer.camera.flyTo({
-        destination: camera.position,
-        orientation: { heading: 0.0, pitch: camera.pitch, roll: 0.0 },
-        duration: 0.7
+      tileset.loadProgress.addEventListener(function(pendingRequests, processingTiles) {
+        const loader = document.getElementById('loadingBar');
+        if (pendingRequests > 0 || processingTiles > 0) { loader.style.display = 'block'; loader.innerText = `⏳ Refinando detalles... (${pendingRequests} bloques)`; } 
+        else { loader.style.display = 'none'; }
       });
-    }
+    });
+
+    function topView() { if (currentTileset) viewer.zoomTo(currentTileset, new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-89.9), 0)); }
+    function perspectiveView() { if (currentTileset) viewer.zoomTo(currentTileset, new Cesium.HeadingPitchRange(Cesium.Math.toRadians(45), Cesium.Math.toRadians(-35), 0)); }
+
+    // OPTIMIZACIÓN 1: Actualización Inteligente del DOM (Brújula)
+    const needle = document.getElementById('compassNeedle');
+    let lastHeading = null;
+    viewer.scene.postRender.addEventListener(function() { 
+      const currentHeading = viewer.camera.heading;
+      if (lastHeading === null || Math.abs(lastHeading - currentHeading) > 0.005) {
+        needle.style.transform = `rotate(${-Cesium.Math.toDegrees(currentHeading)}deg)`; 
+        lastHeading = currentHeading;
+      }
+    });
+    function orientToNorth() { viewer.camera.flyTo({ destination: viewer.camera.position, orientation: { heading: 0.0, pitch: viewer.camera.pitch, roll: 0.0 }, duration: 0.7 }); }
 
     // =========================================================================
-    // 2. MOTOR GEODÉSICO: WGS84 -> SISTEMA LOCAL DE MINA
+    // 2. MOTOR GEODÉSICO: WGS84 -> SISTEMA LOCAL Y VICEVERSA
     // =========================================================================
     function getMinePlanCoordinates(cartographic, zone) {
-      const a = 6378137.0;
-      const f = 1 / 298.257223563;
-      const e2 = 2 * f - f * f;
-      const e_prime2 = e2 / (1 - e2);
-
-      const lat = cartographic.latitude;
-      const lon = cartographic.longitude;
-      const lat0 = Cesium.Math.toRadians(zone.lat0);
-      const lon0 = Cesium.Math.toRadians(zone.lon0);
-
-      const dLon = lon - lon0;
-      const sinLat = Math.sin(lat);
-      const cosLat = Math.cos(lat);
-      const tanLat = Math.tan(lat);
-
+      const a = 6378137.0; const f = 1 / 298.257223563; const e2 = 2*f - f*f; const e_prime2 = e2 / (1 - e2);
+      const lat = cartographic.latitude; const lon = cartographic.longitude;
+      const lat0 = Cesium.Math.toRadians(zone.lat0); const lon0 = Cesium.Math.toRadians(zone.lon0);
+      const dLon = lon - lon0; const sinLat = Math.sin(lat); const cosLat = Math.cos(lat); const tanLat = Math.tan(lat);
       const N = a / Math.sqrt(1 - e2 * sinLat * sinLat);
-      const T = tanLat * tanLat;
-      const C = e_prime2 * cosLat * cosLat;
-      const A = cosLat * dLon;
-
-      const m0 = 1 - e2 / 4 - 3 * e2 * e2 / 64 - 5 * Math.pow(e2, 3) / 256;
-      const m1 = 3 * e2 / 8 + 3 * e2 * e2 / 32 + 45 * Math.pow(e2, 3) / 1024;
-      const m2 = 15 * e2 * e2 / 256 + 45 * Math.pow(e2, 3) / 1024;
-      const m3 = 35 * Math.pow(e2, 3) / 3072;
-
-      const M = a * (m0 * lat - m1 * Math.sin(2 * lat) + m2 * Math.sin(4 * lat) - m3 * Math.sin(6 * lat));
-      const M0 = a * (m0 * lat0 - m1 * Math.sin(2 * lat0) + m2 * Math.sin(4 * lat0) - m3 * Math.sin(6 * lat0));
-
-      const xTM = N * (A + (1 - T + C) * Math.pow(A, 3) / 6);
-      const yTM = (M - M0) + N * tanLat * (A * A / 2 + (5 - T + 9 * C) * Math.pow(A, 4) / 24);
+      const T = tanLat * tanLat; const C = e_prime2 * cosLat * cosLat; const A = cosLat * dLon;
+      const m0 = 1 - e2/4 - 3*e2*e2/64 - 5*Math.pow(e2,3)/256; const m1 = 3*e2/8 + 3*e2*e2/32 + 45*Math.pow(e2,3)/1024;
+      const m2 = 15*e2*e2/256 + 45*Math.pow(e2,3)/1024; const m3 = 35*Math.pow(e2,3)/3072;
+      const M = a * (m0*lat - m1*Math.sin(2*lat) + m2*Math.sin(4*lat) - m3*Math.sin(6*lat));
+      const M0 = a * (m0*lat0 - m1*Math.sin(2*lat0) + m2*Math.sin(4*lat0) - m3*Math.sin(6*lat0));
+      const xTM = N * (A + (1-T+C)*Math.pow(A,3)/6);
+      const yTM = (M - M0) + N * tanLat * (A*A/2 + (5-T+9*C)*Math.pow(A,4)/24);
       const zTM = cartographic.height;
-
-      const s = zone.scale;
-      const r = zone.rvec;
-      const off = zone.offset;
-
-      const localEasting   = s * (xTM - r[2] * yTM + r[1] * zTM) + off[0];
-      const localNorthing  = s * (r[2] * xTM + yTM - r[0] * zTM) + off[1];
-      const localElevation = s * (-r[1] * xTM + r[0] * yTM + zTM) + off[2];
+      const s = zone.scale; const r = zone.rvec; const off = zone.offset;
+      const localEasting   = s * (xTM - r[2]*yTM + r[1]*zTM) + off[0];
+      const localNorthing  = s * (r[2]*xTM + yTM - r[0]*zTM) + off[1];
+      const localElevation = s * (-r[1]*xTM + r[0]*yTM + zTM) + off[2];
 
       return {
         rawE: localEasting, rawN: localNorthing, rawZ: localElevation,
@@ -288,8 +237,15 @@
     }
 
     const coordsHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-    function updateCoordsAtPosition(position) {
-      const pickedPosition = viewer.scene.pickPosition(position);
+    
+    // OPTIMIZACIÓN 2: Throttling del MOUSE_MOVE (Límite de 50ms para no saturar la GPU)
+    let lastMouseMoveTime = 0;
+    coordsHandler.setInputAction(function(movement) {
+      const now = Date.now();
+      if (now - lastMouseMoveTime < 50) return; 
+      lastMouseMoveTime = now;
+
+      const pickedPosition = viewer.scene.pickPosition(movement.endPosition);
       if (Cesium.defined(pickedPosition)) {
         const cartographic = Cesium.Cartographic.fromCartesian(pickedPosition);
         const coords = getMinePlanCoordinates(cartographic, activeZone);
@@ -297,280 +253,155 @@
         document.getElementById('localY').innerText = coords.n;
         document.getElementById('localZ').innerText = coords.z;
       }
-    }
-
-    coordsHandler.setInputAction(function(movement) {
-      updateCoordsAtPosition(movement.endPosition);
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
     // =========================================================================
-    // 3. GESTOR DE HISTORIAL PERSISTENTE (LOCALSTORAGE)
+    // 3. GESTOR DE HISTORIAL
     // =========================================================================
     const STORAGE_KEY = "SURVEY_MEASUREMENTS_" + ZONA_ACTIVA;
-
-    function getHistory() {
-      try {
-        const data = localStorage.getItem(STORAGE_KEY);
-        return data ? JSON.parse(data) : [];
-      } catch(e) { return []; }
-    }
-
-    function saveHistory(list) {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch(e) {}
-      updateHistoryBadge();
-    }
-
-    function updateHistoryBadge() {
-      const list = getHistory();
-      document.getElementById('recCount').innerText = list.length;
-    }
-
-    function clearAllHistory() {
-      if (confirm("¿Deseas vaciar todas las mediciones acumuladas de " + activeZone.nombre + "?")) {
-        localStorage.removeItem(STORAGE_KEY);
-        updateHistoryBadge();
-        clearActiveMeasurement();
-      }
-    }
+    function getHistory() { try { const data = localStorage.getItem(STORAGE_KEY); return data ? JSON.parse(data) : []; } catch(e) { return []; } }
+    function saveHistory(list) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch(e) {} updateHistoryBadge(); }
+    function updateHistoryBadge() { document.getElementById('recCount').innerText = getHistory().length; }
+    function clearAllHistory() { if (confirm("¿Vaciar todas las mediciones de " + activeZone.nombre + "?")) { localStorage.removeItem(STORAGE_KEY); updateHistoryBadge(); clearActiveMeasurement(); } }
     updateHistoryBadge();
 
     // =========================================================================
-    // 4. HERRAMIENTAS DE MEDICIÓN Y ANÁLISIS DE TALUD
+    // 4. CONTROLADOR DE HERRAMIENTAS
     // =========================================================================
-    let currentMode = null;
-    let toolPoints = [];
-    let toolEntities = [];
+    let currentMode = null; let toolPoints = []; let toolEntities = [];
     const toolHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-
-    function resetGraphicsOnly() {
-      toolPoints = [];
-      toolEntities.forEach(e => viewer.entities.remove(e));
-      toolEntities = [];
-    }
+    function resetGraphicsOnly() { toolPoints = []; toolEntities.forEach(e => viewer.entities.remove(e)); toolEntities = []; }
 
     function toggleMode(mode) {
-      const measureBtn = document.getElementById('measureBtn');
-      const slopeBtn = document.getElementById('slopeBtn');
-      const panelMeasure = document.getElementById('panelMeasure');
-      const panelSlope = document.getElementById('panelSlope');
-      const clearBtn = document.getElementById('clearBtn');
+      const mBtn = document.getElementById('measureBtn'); const sBtn = document.getElementById('slopeBtn'); const pBtn = document.getElementById('planeBtn');
+      if (currentMode === mode) { clearActiveMeasurement(); return; }
+      currentMode = mode; resetGraphicsOnly();
+      document.getElementById('clearBtn').style.display = 'inline-block'; viewer.canvas.style.cursor = 'crosshair';
 
-      if (currentMode === mode) {
-        clearActiveMeasurement();
-        return;
-      }
+      mBtn.classList.remove('active-measure'); mBtn.innerText = '📏 Medir';
+      sBtn.classList.remove('active-slope'); sBtn.innerText = '📐 Cresta-Pie';
+      pBtn.classList.remove('active-plane'); pBtn.innerText = '▰ Plano Estructural';
+      document.getElementById('panelMeasure').style.display = 'none'; document.getElementById('panelSlope').style.display = 'none'; document.getElementById('panelPlane').style.display = 'none';
 
-      currentMode = mode;
-      resetGraphicsOnly();
-      clearBtn.style.display = 'inline-block';
-      viewer.canvas.style.cursor = 'crosshair';
-
-      if (mode === 'measure') {
-        measureBtn.classList.add('active-measure');
-        measureBtn.innerText = 'P1: Clic Inicio';
-        slopeBtn.classList.remove('active-slope');
-        slopeBtn.innerText = '📐 Talud';
-        panelMeasure.style.display = 'block';
-        panelSlope.style.display = 'none';
-      } else if (mode === 'slope') {
-        slopeBtn.classList.add('active-slope');
-        slopeBtn.innerText = 'P1: Clic Cresta';
-        measureBtn.classList.remove('active-measure');
-        measureBtn.innerText = '📏 Medir';
-        panelSlope.style.display = 'block';
-        panelMeasure.style.display = 'none';
-      }
+      if (mode === 'measure') { mBtn.classList.add('active-measure'); mBtn.innerText = 'P1: Clic Inicio'; document.getElementById('panelMeasure').style.display = 'block'; }
+      else if (mode === 'slope') { sBtn.classList.add('active-slope'); sBtn.innerText = 'P1: Clic Cresta'; document.getElementById('panelSlope').style.display = 'block'; }
+      else if (mode === 'plane') { pBtn.classList.add('active-plane'); pBtn.innerText = 'P1: Clic Polígono'; document.getElementById('panelPlane').style.display = 'block'; }
     }
 
     toolHandler.setInputAction(function(click) {
-      if (!currentMode) {
-        updateCoordsAtPosition(click.position);
-        return;
-      }
-
+      if (!currentMode) return;
       const pickedPosition = viewer.scene.pickPosition(click.position);
       if (!Cesium.defined(pickedPosition)) return;
-
       toolPoints.push(pickedPosition);
 
-      const pointColor = currentMode === 'measure' ? '#00f0ff' : '#f0883e';
-      const lineColor  = currentMode === 'measure' ? '#7ee787' : '#f0883e';
+      let pColor = currentMode === 'slope' ? '#f0883e' : (currentMode === 'plane' ? '#c084fc' : '#00f0ff');
+      let lColor = currentMode === 'slope' ? '#f0883e' : (currentMode === 'plane' ? '#a371f7' : '#7ee787');
 
-      const pointEntity = viewer.entities.add({
+      toolEntities.push(viewer.entities.add({
         position: pickedPosition,
-        point: {
-          pixelSize: 11,
-          color: Cesium.Color.fromCssColorString(pointColor),
-          outlineColor: Cesium.Color.WHITE,
-          outlineWidth: 2,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY
-        }
-      });
-      toolEntities.push(pointEntity);
+        point: { pixelSize: 11, color: Cesium.Color.fromCssColorString(pColor), outlineColor: Cesium.Color.WHITE, outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY }
+      }));
 
-      const activeBtn = currentMode === 'measure' ? document.getElementById('measureBtn') : document.getElementById('slopeBtn');
+      const mBtn = document.getElementById('measureBtn'); const sBtn = document.getElementById('slopeBtn'); const pBtn = document.getElementById('planeBtn');
 
-      if (toolPoints.length === 1) {
-        activeBtn.innerText = currentMode === 'measure' ? 'P2: Clic Fin' : 'P2: Clic Pata';
-      } else if (toolPoints.length === 2) {
-        const p1 = toolPoints[0];
-        const p2 = toolPoints[1];
+      if (currentMode === 'measure' || currentMode === 'slope') {
+        if (toolPoints.length === 1) {
+          if (currentMode === 'measure') mBtn.innerText = 'P2: Clic Fin'; else sBtn.innerText = 'P2: Clic Pie';
+        } else if (toolPoints.length === 2) {
+          const p1 = toolPoints[0]; const p2 = toolPoints[1];
+          toolEntities.push(viewer.entities.add({ polyline: { positions: [p1, p2], width: 4, material: Cesium.Color.fromCssColorString(lColor), depthFailMaterial: Cesium.Color.fromCssColorString(lColor) } }));
 
-        const lineEntity = viewer.entities.add({
-          polyline: {
-            positions: [p1, p2],
-            width: 4,
-            material: Cesium.Color.fromCssColorString(lineColor),
-            depthFailMaterial: Cesium.Color.fromCssColorString(lineColor),
-            arcType: Cesium.ArcType.NONE
+          const p1L = getMinePlanCoordinates(Cesium.Cartographic.fromCartesian(p1), activeZone);
+          const p2L = getMinePlanCoordinates(Cesium.Cartographic.fromCartesian(p2), activeZone);
+          
+          const dE = p2L.rawE - p1L.rawE; const dN = p2L.rawN - p1L.rawN; const deltaZ = p2L.rawZ - p1L.rawZ;
+          const distH = Math.sqrt(dE*dE + dN*dN); const dist3D = Math.sqrt(distH*distH + deltaZ*deltaZ);
+          
+          let record = {
+            timestamp: new Date().toISOString().replace('T',' ').slice(0, 19), zone: activeZone.nombre, type: currentMode === 'slope' ? "CRESTA_PIE" : "MEDICION_3D",
+            p1_e: p1L.rawE.toFixed(3), p1_n: p1L.rawN.toFixed(3), p1_z: p1L.rawZ.toFixed(3), p2_e: p2L.rawE.toFixed(3), p2_n: p2L.rawN.toFixed(3), p2_z: p2L.rawZ.toFixed(3),
+            p3_e: "", p3_n: "", p3_z: "", area: "",
+            dist3D: dist3D.toFixed(2), distH: distH.toFixed(2), deltaZ: deltaZ.toFixed(2),
+            slope: distH > 0 ? ((Math.abs(deltaZ) / distH) * 100).toFixed(1) : "0.0", dip: (distH > 0 ? Cesium.Math.toDegrees(Math.atan(Math.abs(deltaZ) / distH)) : (Math.abs(deltaZ) > 0 ? 90.0 : 0.0)).toFixed(1),
+            azimuth: (function() { let az = Cesium.Math.toDegrees(Math.atan2(dE, dN)); if (az < 0) az += 360; return az.toFixed(1); })(), strike: ""
+          };
+
+          if (currentMode === 'measure') {
+            document.getElementById('mDist3D').innerText = record.dist3D + ' m'; document.getElementById('mDistH').innerText = record.distH + ' m';
+            document.getElementById('mDeltaZ').innerText = (deltaZ >= 0 ? '+' : '') + record.deltaZ + ' m'; document.getElementById('mSlope').innerText = record.slope + ' %';
+            mBtn.innerText = '📏 Otra Medición'; mBtn.classList.remove('active-measure');
+          } else {
+            document.getElementById('tDip').innerText = record.dip + '°'; document.getElementById('tAzimuth').innerText = record.azimuth + '°';
+            document.getElementById('tDeltaZ').innerText = (deltaZ >= 0 ? '+' : '') + record.deltaZ + ' m'; document.getElementById('tDistH').innerText = record.distH + ' m'; document.getElementById('tDist3D').innerText = record.dist3D + ' m';
+            sBtn.innerText = '📐 Otro Banco'; sBtn.classList.remove('active-slope');
           }
-        });
-        toolEntities.push(lineEntity);
-
-        const enuTransform = Cesium.Transforms.eastNorthUpToFixedFrame(p1);
-        const invEnuTransform = Cesium.Matrix4.inverse(enuTransform, new Cesium.Matrix4());
-        const vectorCartesian = Cesium.Cartesian3.subtract(p2, p1, new Cesium.Cartesian3());
-        const localVector = Cesium.Matrix4.multiplyByPointAsVector(invEnuTransform, vectorCartesian, new Cesium.Cartesian3());
-
-        const east = localVector.x;
-        const north = localVector.y;
-        const deltaZ = localVector.z;
-        const dist3D = Cesium.Cartesian3.distance(p1, p2);
-        const distH = Math.sqrt(east * east + north * north);
-
-        const c1 = Cesium.Cartographic.fromCartesian(p1);
-        const c2 = Cesium.Cartographic.fromCartesian(p2);
-        const p1Local = getMinePlanCoordinates(c1, activeZone);
-        const p2Local = getMinePlanCoordinates(c2, activeZone);
-
-        const now = new Date();
-        const timestamp = now.getFullYear() + "-" +
-          String(now.getMonth() + 1).padStart(2, '0') + "-" +
-          String(now.getDate()).padStart(2, '0') + " " +
-          String(now.getHours()).padStart(2, '0') + ":" +
-          String(now.getMinutes()).padStart(2, '0') + ":" +
-          String(now.getSeconds()).padStart(2, '0');
-
-        let record = {
-          timestamp: timestamp,
-          zone: activeZone.nombre,
-          type: currentMode === 'measure' ? "MEDICION_3D" : "TALUD_ESTRUCTURAL",
-          p1_e: p1Local.rawE.toFixed(3),
-          p1_n: p1Local.rawN.toFixed(3),
-          p1_z: p1Local.rawZ.toFixed(3),
-          p2_e: p2Local.rawE.toFixed(3),
-          p2_n: p2Local.rawN.toFixed(3),
-          p2_z: p2Local.rawZ.toFixed(3),
-          dist3D: dist3D.toFixed(2),
-          distH: distH.toFixed(2),
-          deltaZ: deltaZ.toFixed(2),
-          slope: distH > 0 ? ((Math.abs(deltaZ) / distH) * 100).toFixed(1) : "0.0",
-          dip: (distH > 0 ? Cesium.Math.toDegrees(Math.atan(Math.abs(deltaZ) / distH)) : (Math.abs(deltaZ) > 0 ? 90.0 : 0.0)).toFixed(1),
-          azimuth: (function() {
-            let az = Cesium.Math.toDegrees(Math.atan2(east, north));
-            if (az < 0) az += 360;
-            return az.toFixed(1);
-          })()
-        };
-
-        if (currentMode === 'measure') {
-          document.getElementById('mDist3D').innerText = record.dist3D + ' m';
-          document.getElementById('mDistH').innerText = record.distH + ' m';
-          document.getElementById('mDeltaZ').innerText = (deltaZ >= 0 ? '+' : '') + record.deltaZ + ' m';
-          document.getElementById('mSlope').innerText = record.slope + ' %';
-          activeBtn.innerText = '📏 Medir de nuevo';
-          activeBtn.classList.remove('active-measure');
-        } else if (currentMode === 'slope') {
-          document.getElementById('tDip').innerText = record.dip + '°';
-          document.getElementById('tAzimuth').innerText = record.azimuth + '°';
-          document.getElementById('tDeltaZ').innerText = (deltaZ >= 0 ? '+' : '') + record.deltaZ + ' m';
-          document.getElementById('tDistH').innerText = record.distH + ' m';
-          document.getElementById('tDist3D').innerText = record.dist3D + ' m';
-          activeBtn.innerText = '📐 Analizar otro';
-          activeBtn.classList.remove('active-slope');
+          const history = getHistory(); history.push(record); saveHistory(history);
+          viewer.canvas.style.cursor = 'default'; currentMode = null;
         }
+      } 
+      else if (currentMode === 'plane') {
+        if (toolPoints.length === 1) pBtn.innerText = 'P2: Segundo Clic';
+        else if (toolPoints.length === 2) {
+           pBtn.innerText = 'P3: Cerrar Triángulo'; toolEntities.push(viewer.entities.add({ polyline: { positions: [toolPoints[0], toolPoints[1]], width: 3, material: Cesium.Color.fromCssColorString(lColor), depthFailMaterial: Cesium.Color.fromCssColorString(lColor) } }));
+        }
+        else if (toolPoints.length === 3) {
+          const p1 = toolPoints[0]; const p2 = toolPoints[1]; const p3 = toolPoints[2];
+          toolEntities.push(viewer.entities.add({ polygon: { hierarchy: new Cesium.PolygonHierarchy([p1, p2, p3]), material: Cesium.Color.fromCssColorString('#a371f7').withAlpha(0.3), perPositionHeight: true, outline: true, outlineColor: Cesium.Color.fromCssColorString('#d8b4fe') } }));
 
-        const history = getHistory();
-        history.push(record);
-        saveHistory(history);
+          const p1L = getMinePlanCoordinates(Cesium.Cartographic.fromCartesian(p1), activeZone);
+          const p2L = getMinePlanCoordinates(Cesium.Cartographic.fromCartesian(p2), activeZone);
+          const p3L = getMinePlanCoordinates(Cesium.Cartographic.fromCartesian(p3), activeZone);
 
-        viewer.canvas.style.cursor = 'default';
-        currentMode = null;
+          const uE = p2L.rawE - p1L.rawE; const uN = p2L.rawN - p1L.rawN; const uZ = p2L.rawZ - p1L.rawZ;
+          const vE = p3L.rawE - p1L.rawE; const vN = p3L.rawN - p1L.rawN; const vZ = p3L.rawZ - p1L.rawZ;
+
+          let nE = uN * vZ - uZ * vN; let nN = uZ * vE - uE * vZ; let nZ = uE * vN - uN * vE;
+          if (nZ < 0) { nE = -nE; nN = -nN; nZ = -nZ; }
+          const magnitude = Math.sqrt(nE*nE + nN*nN + nZ*nZ);
+          
+          let dip = Cesium.Math.toDegrees(Math.acos(nZ / magnitude)); let dipDir = Cesium.Math.toDegrees(Math.atan2(nE, nN)); if (dipDir < 0) dipDir += 360;
+          let strike = (dipDir + 270) % 360; let area = 0.5 * magnitude;
+
+          let record = {
+            timestamp: new Date().toISOString().replace('T',' ').slice(0, 19), zone: activeZone.nombre, type: "PLANO_ESTRUCTURAL",
+            p1_e: p1L.rawE.toFixed(3), p1_n: p1L.rawN.toFixed(3), p1_z: p1L.rawZ.toFixed(3), p2_e: p2L.rawE.toFixed(3), p2_n: p2L.rawN.toFixed(3), p2_z: p2L.rawZ.toFixed(3), p3_e: p3L.rawE.toFixed(3), p3_n: p3L.rawN.toFixed(3), p3_z: p3L.rawZ.toFixed(3),
+            dist3D: "", distH: "", deltaZ: "", slope: "", dip: dip.toFixed(1), azimuth: dipDir.toFixed(1), strike: strike.toFixed(1), area: area.toFixed(1)
+          };
+
+          document.getElementById('pStrike').innerText = record.strike + '°'; document.getElementById('pDip').innerText = record.dip + '°';
+          document.getElementById('pDipDir').innerText = record.azimuth + '°'; document.getElementById('pArea').innerText = record.area + ' m²';
+
+          pBtn.innerText = '▰ Analizar Otro'; pBtn.classList.remove('active-plane');
+          const history = getHistory(); history.push(record); saveHistory(history);
+          viewer.canvas.style.cursor = 'default'; currentMode = null;
+        }
       }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
     function clearActiveMeasurement() {
-      resetGraphicsOnly();
-      currentMode = null;
-
-      const measureBtn = document.getElementById('measureBtn');
-      const slopeBtn = document.getElementById('slopeBtn');
-      measureBtn.classList.remove('active-measure');
-      measureBtn.innerText = '📏 Medir';
-      slopeBtn.classList.remove('active-slope');
-      slopeBtn.innerText = '📐 Talud';
-
-      document.getElementById('panelMeasure').style.display = 'none';
-      document.getElementById('panelSlope').style.display = 'none';
-      document.getElementById('clearBtn').style.display = 'none';
-      viewer.canvas.style.cursor = 'default';
+      resetGraphicsOnly(); currentMode = null;
+      document.getElementById('measureBtn').classList.remove('active-measure'); document.getElementById('measureBtn').innerText = '📏 Medir';
+      document.getElementById('slopeBtn').classList.remove('active-slope'); document.getElementById('slopeBtn').innerText = '📐 Cresta-Pie';
+      document.getElementById('planeBtn').classList.remove('active-plane'); document.getElementById('planeBtn').innerText = '▰ Plano Estructural';
+      document.getElementById('panelMeasure').style.display = 'none'; document.getElementById('panelSlope').style.display = 'none'; document.getElementById('panelPlane').style.display = 'none'; document.getElementById('clearBtn').style.display = 'none'; viewer.canvas.style.cursor = 'default';
     }
 
     // =========================================================================
-    // 5. CAPTURA EJECUTIVA EN ALTA RESOLUCIÓN (PNG)
+    // 5. EXPORTACIÓN CSV Y CAPTURA
     // =========================================================================
     function takeExecutiveScreenshot() {
-      viewer.render();
-      const imageUri = viewer.canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      const now = new Date();
-      const timeStr = now.toISOString().slice(0, 10) + "_" +
-                      String(now.getHours()).padStart(2, '0') +
-                      String(now.getMinutes()).padStart(2, '0');
-
-      link.download = `Captura_${ZONA_ACTIVA}_${timeStr}.png`;
-      link.href = imageUri;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      viewer.render(); const link = document.createElement('a'); link.download = `Captura_${ZONA_ACTIVA}_${new Date().toISOString().slice(0, 10)}.png`;
+      link.href = viewer.canvas.toDataURL('image/png'); document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
-
-    // =========================================================================
-    // 6. EXPORTADOR A CSV (EXCEL)
-    // =========================================================================
     function exportToCSV() {
-      const list = getHistory();
-      if (list.length === 0) {
-        alert("No hay mediciones registradas aún para descargar.");
-        return;
-      }
-
-      const headers = [
-        "ID", "Fecha_Hora", "Zona", "Tipo_Analisis",
-        "P1_Este_X", "P1_Norte_Y", "P1_Cota_Z",
-        "P2_Este_X", "P2_Norte_Y", "P2_Cota_Z",
-        "Distancia_3D_m", "Distancia_Horiz_m", "Desnivel_DeltaZ_m",
-        "Pendiente_Pct", "Inclinacion_Dip_Deg", "Direccion_Azimut_Deg"
-      ];
-
-      const rows = list.map((item, idx) => [
-        idx + 1, `"${item.timestamp}"`, `"${item.zone}"`, `"${item.type}"`,
-        item.p1_e, item.p1_n, item.p1_z,
-        item.p2_e, item.p2_n, item.p2_z,
-        item.dist3D, item.distH, item.deltaZ, item.slope, item.dip, item.azimuth
-      ]);
-
+      const list = getHistory(); if (list.length === 0) { alert("No hay mediciones registradas aún."); return; }
+      const headers = [ "ID", "Fecha_Hora", "Zona", "Tipo_Analisis", "P1_Este_X", "P1_Norte_Y", "P1_Cota_Z", "P2_Este_X", "P2_Norte_Y", "P2_Cota_Z", "P3_Este_X", "P3_Norte_Y", "P3_Cota_Z", "Distancia_3D_m", "Distancia_Horiz_m", "Desnivel_DeltaZ_m", "Area_Analizada_m2", "Pendiente_Pct", "Inclinacion_Dip_Deg", "Dir_Descenso_Azimut_Deg", "Rumbo_Strike_Deg" ];
+      const rows = list.map((item, idx) => [ idx + 1, `"${item.timestamp}"`, `"${item.zone}"`, `"${item.type}"`, item.p1_e, item.p1_n, item.p1_z, item.p2_e, item.p2_n, item.p2_z, item.p3_e, item.p3_n, item.p3_z, item.dist3D, item.distH, item.deltaZ, item.area, item.slope, item.dip, item.azimuth, item.strike ]);
       const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
       const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      const safeDate = new Date().toISOString().slice(0,10);
-
-      link.setAttribute("href", url);
-      link.setAttribute("download", `Mediciones_${ZONA_ACTIVA}_${safeDate}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const url = URL.createObjectURL(blob); const link = document.createElement("a");
+      link.setAttribute("href", url); link.setAttribute("download", `Mediciones_${ZONA_ACTIVA}_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
   </script>
 </body>

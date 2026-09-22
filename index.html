@@ -73,7 +73,7 @@
     <button class="nav-btn" onclick="perspectiveView()">Perspectiva 3D</button>
     <button class="nav-btn" id="measureBtn" onclick="toggleMode('measure')">📏 Medir</button>
     <button class="nav-btn" id="slopeBtn" onclick="toggleMode('slope')">📐 Cresta-Pie</button>
-    <button class="nav-btn" id="planeBtn" onclick="toggleMode('plane')">▰ Plano Estructural</button>
+    <button class="nav-btn" id="planeBtn" onclick="toggleMode('plane')">▰ Análisis 3 Puntos</button>
     <button class="nav-btn nav-btn-camera" onclick="takeExecutiveScreenshot()">📸 Captura</button>
     <button class="nav-btn nav-btn-export" id="exportBtn" onclick="exportToCSV()">📥 CSV (<span id="recCount">0</span>)</button>
     <button class="nav-btn" id="clearBtn" style="display: none;" onclick="clearActiveMeasurement()">Borrar</button>
@@ -107,22 +107,25 @@
   </div>
 
   <div class="info-panel panel-plane" id="panelPlane">
-    <h2>Plano Estructural (3 Puntos)</h2>
+    <h2>Análisis por 3 Puntos</h2>
     <div class="metric-row"><span>Rumbo (Strike):</span><span class="metric-val val-plane" id="pStrike">-- °</span></div>
     <div class="metric-row"><span>Buzamiento (Dip):</span><span class="metric-val val-plane" id="pDip">-- °</span></div>
     <div class="metric-row"><span>Dir. de Buzamiento:</span><span class="metric-val val-plane" id="pDipDir">-- °</span></div>
-    <div class="metric-row"><span>Área Analizada:</span><span class="metric-val val-plane" id="pArea">-- m²</span></div>
+    <div class="metric-row"><span>Área del Triángulo:</span><span class="metric-val val-plane" id="pArea">-- m²</span></div>
+    <div style="font-size: 9px; color: #8b949e; margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.2); line-height: 1.3;">
+      Nota Metodológica: El análisis describe el plano geométrico definido por los 3 puntos. No constituye por sí mismo una medición estructural certificada.
+    </div>
   </div>
 
   <div class="coords-card" id="coordsCard">
     <div class="tags-container">
       <div class="system-tag" id="zoneTag">SISTEMA LOCAL DE MINA</div>
-      <div class="source-tag">FUENTE COTA: SUPERFICIE 3D VISIBLE (DSM)</div>
+      <div class="source-tag">FUENTE Z: MALLA TOPOGRÁFICA 3D</div>
     </div>
     <div class="coords-row">
       <div class="coord-item">Este (X): <span id="localX">--</span> m</div>
       <div class="coord-item">Norte (Y): <span id="localY">--</span> m</div>
-      <div class="coord-item">Cota Z: <span id="localZ">--</span> m</div>
+      <div class="coord-item">Elevación Z: <span id="localZ">--</span> m</div>
     </div>
   </div>
 
@@ -280,7 +283,7 @@
 
       mBtn.classList.remove('active-measure'); mBtn.innerText = '📏 Medir';
       sBtn.classList.remove('active-slope'); sBtn.innerText = '📐 Cresta-Pie';
-      pBtn.classList.remove('active-plane'); pBtn.innerText = '▰ Plano Estructural';
+      pBtn.classList.remove('active-plane'); pBtn.innerText = '▰ Análisis 3 Puntos';
       document.getElementById('panelMeasure').style.display = 'none'; document.getElementById('panelSlope').style.display = 'none'; document.getElementById('panelPlane').style.display = 'none';
 
       if (mode === 'measure') { mBtn.classList.add('active-measure'); mBtn.innerText = 'P1: Clic Inicio'; document.getElementById('panelMeasure').style.display = 'block'; }
@@ -317,8 +320,12 @@
           const dE = p2L.rawE - p1L.rawE; const dN = p2L.rawN - p1L.rawN; const deltaZ = p2L.rawZ - p1L.rawZ;
           const distH = Math.sqrt(dE*dE + dN*dN); const dist3D = Math.sqrt(distH*distH + deltaZ*deltaZ);
           
+          // MEJORA TRAZABILIDAD: Guardar Hora Local y UTC por separado y el ID del modelo
           let record = {
-            timestamp: new Date().toISOString().replace('T',' ').slice(0, 19), zone: activeZone.nombre, type: currentMode === 'slope' ? "CRESTA_PIE" : "MEDICION_3D",
+            timestampLocal: new Date().toLocaleString(),
+            timestampUTC: new Date().toISOString(),
+            modeloId: ZONA_ACTIVA,
+            zone: activeZone.nombre, type: currentMode === 'slope' ? "CRESTA_PIE" : "MEDICION_3D",
             p1_e: p1L.rawE.toFixed(3), p1_n: p1L.rawN.toFixed(3), p1_z: p1L.rawZ.toFixed(3), p2_e: p2L.rawE.toFixed(3), p2_n: p2L.rawN.toFixed(3), p2_z: p2L.rawZ.toFixed(3),
             p3_e: "", p3_n: "", p3_z: "", area: "",
             dist3D: dist3D.toFixed(2), distH: distH.toFixed(2), deltaZ: deltaZ.toFixed(2),
@@ -346,8 +353,7 @@
         }
         else if (toolPoints.length === 3) {
           const p1 = toolPoints[0]; const p2 = toolPoints[1]; const p3 = toolPoints[2];
-          toolEntities.push(viewer.entities.add({ polygon: { hierarchy: new Cesium.PolygonHierarchy([p1, p2, p3]), material: Cesium.Color.fromCssColorString('#a371f7').withAlpha(0.3), perPositionHeight: true, outline: true, outlineColor: Cesium.Color.fromCssColorString('#d8b4fe') } }));
-
+          
           const p1L = getMinePlanCoordinates(Cesium.Cartographic.fromCartesian(p1), activeZone);
           const p2L = getMinePlanCoordinates(Cesium.Cartographic.fromCartesian(p2), activeZone);
           const p3L = getMinePlanCoordinates(Cesium.Cartographic.fromCartesian(p3), activeZone);
@@ -356,19 +362,42 @@
           const vE = p3L.rawE - p1L.rawE; const vN = p3L.rawN - p1L.rawN; const vZ = p3L.rawZ - p1L.rawZ;
 
           let nE = uN * vZ - uZ * vN; let nN = uZ * vE - uE * vZ; let nZ = uE * vN - uN * vE;
-          if (nZ < 0) { nE = -nE; nN = -nN; nZ = -nZ; }
           const magnitude = Math.sqrt(nE*nE + nN*nN + nZ*nZ);
           
+          // MEJORA 1: CONTROL DE COLINEALIDAD CRÍTICO
+          if (magnitude < 0.001) {
+            alert("Error: Los 3 puntos seleccionados son casi colineales (están en línea recta) y no definen un plano geométrico estable. Por favor, selecciona un triángulo más amplio.");
+            clearActiveMeasurement();
+            return;
+          }
+
+          // Si pasa la validación, dibuja el polígono de confirmación
+          toolEntities.push(viewer.entities.add({ polygon: { hierarchy: new Cesium.PolygonHierarchy([p1, p2, p3]), material: Cesium.Color.fromCssColorString('#a371f7').withAlpha(0.3), perPositionHeight: true, outline: true, outlineColor: Cesium.Color.fromCssColorString('#d8b4fe') } }));
+
+          if (nZ < 0) { nE = -nE; nN = -nN; nZ = -nZ; }
+          
           let dip = Cesium.Math.toDegrees(Math.acos(nZ / magnitude)); let dipDir = Cesium.Math.toDegrees(Math.atan2(nE, nN)); if (dipDir < 0) dipDir += 360;
-          let strike = (dipDir + 270) % 360; let area = 0.5 * magnitude;
+          
+          // MEJORA 2: CONVENCIÓN DE STRIKE (Rumbo bidireccional geológico)
+          let strike1 = (dipDir + 90) % 360;
+          let strike2 = (dipDir + 270) % 360;
+          let minStrike = Math.min(strike1, strike2);
+          let maxStrike = Math.max(strike1, strike2);
+          const pad = (num) => num < 100 ? "0" + num.toFixed(1) : num.toFixed(1);
+          let strikeText = `${pad(minStrike)}° / ${pad(maxStrike)}°`;
+          
+          let area = 0.5 * magnitude;
 
           let record = {
-            timestamp: new Date().toISOString().replace('T',' ').slice(0, 19), zone: activeZone.nombre, type: "PLANO_ESTRUCTURAL",
+            timestampLocal: new Date().toLocaleString(),
+            timestampUTC: new Date().toISOString(),
+            modeloId: ZONA_ACTIVA,
+            zone: activeZone.nombre, type: "PLANO_ESTRUCTURAL",
             p1_e: p1L.rawE.toFixed(3), p1_n: p1L.rawN.toFixed(3), p1_z: p1L.rawZ.toFixed(3), p2_e: p2L.rawE.toFixed(3), p2_n: p2L.rawN.toFixed(3), p2_z: p2L.rawZ.toFixed(3), p3_e: p3L.rawE.toFixed(3), p3_n: p3L.rawN.toFixed(3), p3_z: p3L.rawZ.toFixed(3),
-            dist3D: "", distH: "", deltaZ: "", slope: "", dip: dip.toFixed(1), azimuth: dipDir.toFixed(1), strike: strike.toFixed(1), area: area.toFixed(1)
+            dist3D: "", distH: "", deltaZ: "", slope: "", dip: dip.toFixed(1), azimuth: dipDir.toFixed(1), strike: strikeText, area: area.toFixed(1)
           };
 
-          document.getElementById('pStrike').innerText = record.strike + '°'; document.getElementById('pDip').innerText = record.dip + '°';
+          document.getElementById('pStrike').innerText = record.strike; document.getElementById('pDip').innerText = record.dip + '°';
           document.getElementById('pDipDir').innerText = record.azimuth + '°'; document.getElementById('pArea').innerText = record.area + ' m²';
 
           pBtn.innerText = '▰ Analizar Otro'; pBtn.classList.remove('active-plane');
@@ -382,7 +411,7 @@
       resetGraphicsOnly(); currentMode = null;
       document.getElementById('measureBtn').classList.remove('active-measure'); document.getElementById('measureBtn').innerText = '📏 Medir';
       document.getElementById('slopeBtn').classList.remove('active-slope'); document.getElementById('slopeBtn').innerText = '📐 Cresta-Pie';
-      document.getElementById('planeBtn').classList.remove('active-plane'); document.getElementById('planeBtn').innerText = '▰ Plano Estructural';
+      document.getElementById('planeBtn').classList.remove('active-plane'); document.getElementById('planeBtn').innerText = '▰ Análisis 3 Puntos';
       document.getElementById('panelMeasure').style.display = 'none'; document.getElementById('panelSlope').style.display = 'none'; document.getElementById('panelPlane').style.display = 'none'; document.getElementById('clearBtn').style.display = 'none'; viewer.canvas.style.cursor = 'default';
     }
 
@@ -393,10 +422,28 @@
       viewer.render(); const link = document.createElement('a'); link.download = `Captura_${ZONA_ACTIVA}_${new Date().toISOString().slice(0, 10)}.png`;
       link.href = viewer.canvas.toDataURL('image/png'); document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
+    
+    // MEJORA 3: CSV CON TRAZABILIDAD (Hora local vs UTC e ID del Modelo)
     function exportToCSV() {
       const list = getHistory(); if (list.length === 0) { alert("No hay mediciones registradas aún."); return; }
-      const headers = [ "ID", "Fecha_Hora", "Zona", "Tipo_Analisis", "P1_Este_X", "P1_Norte_Y", "P1_Cota_Z", "P2_Este_X", "P2_Norte_Y", "P2_Cota_Z", "P3_Este_X", "P3_Norte_Y", "P3_Cota_Z", "Distancia_3D_m", "Distancia_Horiz_m", "Desnivel_DeltaZ_m", "Area_Analizada_m2", "Pendiente_Pct", "Inclinacion_Dip_Deg", "Dir_Descenso_Azimut_Deg", "Rumbo_Strike_Deg" ];
-      const rows = list.map((item, idx) => [ idx + 1, `"${item.timestamp}"`, `"${item.zone}"`, `"${item.type}"`, item.p1_e, item.p1_n, item.p1_z, item.p2_e, item.p2_n, item.p2_z, item.p3_e, item.p3_n, item.p3_z, item.dist3D, item.distH, item.deltaZ, item.area, item.slope, item.dip, item.azimuth, item.strike ]);
+      const versionVisor = "v2.1.0"; // Versión para control documental
+      
+      const headers = [ "ID", "Modelo_ID", "Visor_Version", "Fecha_Hora_Local", "Fecha_Hora_UTC", "Zona", "Tipo_Analisis", "P1_Este_X", "P1_Norte_Y", "P1_Elevacion_Z", "P2_Este_X", "P2_Norte_Y", "P2_Elevacion_Z", "P3_Este_X", "P3_Norte_Y", "P3_Elevacion_Z", "Distancia_3D_m", "Distancia_Horiz_m", "Desnivel_DeltaZ_m", "Area_Analizada_m2", "Pendiente_Pct", "Inclinacion_Dip_Deg", "Dir_Descenso_Azimut_Deg", "Rumbo_Strike_Deg" ];
+      
+      const rows = list.map((item, idx) => [ 
+        idx + 1, 
+        `"${item.modeloId || ZONA_ACTIVA}"`, 
+        `"${versionVisor}"`, 
+        `"${item.timestampLocal || item.timestamp || ""}"`, 
+        `"${item.timestampUTC || item.timestamp || ""}"`, 
+        `"${item.zone}"`, `"${item.type}"`, 
+        item.p1_e, item.p1_n, item.p1_z, 
+        item.p2_e, item.p2_n, item.p2_z, 
+        item.p3_e, item.p3_n, item.p3_z, 
+        item.dist3D, item.distH, item.deltaZ, item.area, item.slope, item.dip, item.azimuth, 
+        `"${item.strike}"` 
+      ]);
+      
       const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
       const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob); const link = document.createElement("a");
